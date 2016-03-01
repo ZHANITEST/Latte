@@ -54,9 +54,9 @@ class LatteCup{
 		this.TOKEN_LIST = parsing();
 	}
 
-	// 지울 예정
 	string strip(){
-		string temp = this.HTML_BODY; return temp;
+		string temp = this.HTML_BODY;
+		return temp;
 	}
 
 	string[] parsing(){
