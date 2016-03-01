@@ -14,11 +14,14 @@
 
 module latte;
 
-import std.stdio:File,writeln;
+import std.algorithm.searching:countUntil,canFind;
+import std.string:indexOf,lastIndexOf,replace;
+import std.regex:regex,RegexMatch,matchAll,match,replaceAll;
+import std.stdio:File,writeln,write;
 import std.array;
 
-immutable string Ctag_attr_patthen = "([\\w]+)=[\",\']{1}([\\.:\\/\\#\?\\&\\=\\%\\_\\- \\dA-zㄱ-ㅎㅏ-ㅣ가-힣]*)[\",\']{1}";
-immutable string Cstyle_attr_patthen = "(style)=[\",\']{1}([\\)\\(\\.:;,\\/\\#\?\\&\\=\\%\\_\\- \\d\\w]*)[\",\']{1}";
+immutable string Ctag_attr_patthen = "([\\w]+)=[\",\']{1}([\\.\\:\\/\\#\?\\&=\\%_\\- \\d\\wㄱ-ㅎㅏ-ㅣ가-힣]*)[\",\']{1}";
+immutable string Cstyle_attr_patthen = "(style)=[\",\']{1}([\\)\\(\\.:;,\\/\\#\?\\&=\\%_\\- \\d\\w]*)[\",\']{1}";
 immutable string[] Cinline = [
 	"a", "abbr", "acronym", "applet",
 	"b", "basefont", "bdo", "big", "br", "button",
@@ -40,10 +43,6 @@ immutable string[] Cblock = [
 	"h1", "h2", "h3", "h4", "h5", "h6", "hr", 
 	"isindex", "menu", "noframes", "ol", "p", "pre", "table", "ul",
 ];
-
-import std.algorithm.searching:countUntil,canFind;
-import std.string:indexOf,lastIndexOf,replace;
-import std.regex:regex,RegexMatch,matchAll,match,replaceAll;
 
 class LatteCup{
 	private string HTML_BODY;
@@ -113,30 +112,83 @@ class LatteCup{
 	string[string][] takeAll( string tag_name )
 	{
 		// 있는 지 보고 없으면 Error로 Throw
-		if( countUntil(Cinline, tag_name) == -1 || countUntil(Cblock, tag_name) == -1 )
-			{ throw new Error("Coudn't find <"~tag_name~"> tag."); }
+		//if( countUntil(Cinline, tag_name) == -1 || countUntil(Cblock, tag_name) == -1 )
+		//	{ throw new Error("Coudn't find <"~tag_name~"> tag."); }
+		debug(latte) writeln("latte.takeAll: -- Start --");
 		string[] Xtoken_list = this.TOKEN_LIST;
-		string[] result = [];
-		foreach( token; Xtoken_list )
+		string[string][] result;
+		string value = "";
+
+		// 몇번째 토큰인지 위치를 알기 위해 foreach가 아니라 for 사용
+		for( uint where=0; where<Xtoken_list.length; where+=1 )
 		{
-			if( token.indexOf("<"~tag_name)!=-1 || token.indexOf("</"~tag_name)!=-1 )
+			string[string] hash;
+			string token = Xtoken_list[where];
+
+			//if( token.indexOf("<"~tag_name)!=-1 || token.indexOf("</"~tag_name)!=-1 )
+			if( token.indexOf("<"~tag_name)!=-1 )
 			{
-				auto tag_attr = matchAll();
-				auto style_attr;
+				debug(latte){
+					write("latte.takeAll:");
+					writeln("token=",token);
+				}
+				// 기본 태그
+				auto rm_nomal_tag = matchAll( token, regex(Ctag_attr_patthen) );
+				// 스타일 태그
+				auto rm_style_tag = matchAll( token, regex(Cstyle_attr_patthen) );
+
+				if( !rm_nomal_tag.empty() )
+				{
+					foreach( element; rm_nomal_tag )
+						{ hash[ element[1] ] = element[2]; }
+				}
+
+				if( !rm_style_tag.empty() )
+				{
+					foreach( element; rm_style_tag )
+						{ hash[ element[1] ] = element[2]; }
+				}
+
+				// inline 태그 이므로 value 문자열로 들어갈 값 탐색
+				string end_token = "</"~tag_name~">";
+				uint pass_count = 0;
+				// end 토큰이 나올 때 까지 현재 선택된 토큰의 위치+1(다음)에서 검색시작
+				string value_temp = "";
+				foreach( cursor_token; this.TOKEN_LIST[ (where+1)..($-1) ] )
+				{
+					debug(latte){
+						write("latte.takeAll:");
+						writeln("cursor_token=",cursor_token,", end_token=",end_token);
+					}
+					// 일반 문자열이면 담는다
+					if( cursor_token.indexOf("<")==-1 )
+					{
+						value_temp ~= cursor_token;
+					}
+					// 엔드 토큰인지 검사
+					else if( !match(cursor_token,regex(end_token)).empty() )
+					{
+						debug(latte) writeln("latte.takeAll: -- End --");
+						break;
+					}
+				}
+				hash["body"] = value_temp;
 			}
+			// 비어있는 해쉬 빼고 내용이 있을 때만 추가
+			if( hash.length != 0 )
+			{ result ~= hash; }
 		}
+		return result;
 	}
 }
 
 void main()
 {
-	auto f = File("sample_ez.txt", "r");
+	auto f = File("sample.txt", "r");
 	string html_body = "";
 	while( !f.eof() ) { html_body~=f.readln(); } f.close();
 
-	
 	auto cup = new LatteCup( html_body );
-	foreach( e; cup.parsing() ){
-		writeln(e);
-	}
+	foreach( e; cup.takeAll("a") )
+	{ writeln(e); }
 }
