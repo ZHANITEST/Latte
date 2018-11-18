@@ -1,0 +1,10 @@
+{
+    "name": "latte-d",
+    "authors": [
+        "ZHANITEST"
+    ],
+    "targetType":"library",
+    "description": "simplest and dirty html parser for D programming language. ",
+    "copyright": "Copyleft LGPLv2 2017, ZHANITEST",
+    "license": "LGPL-v2"
+}
