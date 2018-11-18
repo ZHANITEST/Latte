@@ -1,14 +1,12 @@
-/*
+/**
  *
- * latte.d
- * - 라떼
- * 가벼운 HTML 태그 파서
+ * latte-d
+ * 	HTML 태그 파서
  *
- * License: BSD
+ * License: LGPL-v2
  * By ZHANITEST(github.com/zhanitest)
  *
  */
-
 // C - 상수
 // X - 카피
 
@@ -44,16 +42,22 @@ immutable string[] Cblock = [
 	"isindex", "menu", "noframes", "ol", "p", "pre", "table", "ul",
 ];
 
+/**
+ * 파서 클래스
+ */
 class LatteCup{
-	private string HTML_BODY;
-	private string[] TOKEN_LIST;
+	private string    HTML_BODY; /// 입력받은 HTML
+	private string[] TOKEN_LIST; /// 토큰(엘리먼트) 리스트
 
-	this( string html_body )
-	{
+	/**
+	 * 생성자
+	 *	Params:
+	 *		html_body = 파싱할 html 문자열
+	 */
+	this(string html_body){
 		this.HTML_BODY = html_body;
 		this.TOKEN_LIST = parsing();
 	}
-
 	string strip(){
 		string temp = this.HTML_BODY;
 		return temp;
@@ -108,7 +112,9 @@ class LatteCup{
 		return result;
 	}
 
-	// 태그 주문
+	/**
+	 * 입력받은 태그로 부터 속성 추출
+	 */
 	string[string][] takeAll( string tag_name )
 	{
 		// 있는 지 보고 없으면 Error로 Throw
@@ -137,14 +143,12 @@ class LatteCup{
 				// 스타일 태그
 				auto rm_style_tag = matchAll( token, regex(Cstyle_attr_patthen) );
 
-				if( !rm_nomal_tag.empty() )
-				{
+				if( !rm_nomal_tag.empty() ){
 					foreach( element; rm_nomal_tag )
 						{ hash[ element[1] ] = element[2]; }
 				}
 
-				if( !rm_style_tag.empty() )
-				{
+				if( !rm_style_tag.empty() ){
 					foreach( element; rm_style_tag )
 						{ hash[ element[1] ] = element[2]; }
 				}
@@ -181,14 +185,23 @@ class LatteCup{
 		return result;
 	}
 }
-
-void main()
-{
+/**
+ * 유닛테스트
+ */
+unittest{
 	auto f = File("sample.txt", "r");
 	string html_body = "";
-	while( !f.eof() ) { html_body~=f.readln(); } f.close();
+	while(!f.eof()){
+		html_body~=f.readln();
+	}
+	f.close();
 
-	auto cup = new LatteCup( html_body );
-	foreach( e; cup.takeAll("a") )
-	{ writeln(e); }
+	auto cup = new LatteCup(html_body);
+	f = File("result.txt", "w");
+	foreach( e; cup.takeAll("a") ){
+		import std.conv:to;
+		f.writeln(to!string(e));
+		writeln(e);
+	}
+	f.close();
 }
